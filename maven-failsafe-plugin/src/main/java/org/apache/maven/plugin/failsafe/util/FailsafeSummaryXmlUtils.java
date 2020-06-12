@@ -20,7 +20,7 @@ package org.apache.maven.plugin.failsafe.util;
  */
 
 import org.apache.maven.surefire.shared.io.IOUtils;
-import org.apache.maven.surefire.suite.RunResult;
+import org.apache.maven.surefire.api.suite.RunResult;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
@@ -39,7 +39,7 @@ import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.maven.surefire.shared.lang3.StringEscapeUtils.escapeXml10;
 import static org.apache.maven.surefire.shared.lang3.StringEscapeUtils.unescapeXml;
-import static org.apache.maven.surefire.util.internal.StringUtils.isBlank;
+import static org.apache.maven.surefire.shared.utils.StringUtils.isBlank;
 
 /**
  * @author <a href="mailto:tibordigana@apache.org">Tibor Digana (tibor17)</a>

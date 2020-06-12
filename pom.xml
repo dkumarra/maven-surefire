@@ -23,7 +23,7 @@
   <parent>
     <artifactId>maven-parent</artifactId>
     <groupId>org.apache.maven</groupId>
-    <version>33</version>
+    <version>34</version>
   </parent>
 
   <groupId>org.apache.maven.surefire</groupId>
@@ -51,6 +51,7 @@
     <module>surefire-logger-api</module>
     <module>surefire-api</module>
     <module>surefire-extensions-api</module>
+    <module>surefire-extensions-spi</module>
     <module>surefire-booter</module>
     <module>surefire-grouper</module>
     <module>surefire-providers</module>
@@ -90,14 +91,14 @@
     <mavenVersion>3.0</mavenVersion>
     <!-- <shadedVersion>3.0.0-M2</shadedVersion> commented out due to https://issues.apache.org/jira/browse/MRELEASE-799 -->
     <commonsLang3Version>3.8.1</commonsLang3Version>
-    <commonsCompress>1.19</commonsCompress>
+    <commonsCompress>1.20</commonsCompress>
     <commonsIoVersion>2.6</commonsIoVersion>
-    <doxiaVersion>1.9</doxiaVersion>
-    <doxiaSitetoolsVersion>1.9.1</doxiaSitetoolsVersion>
-    <plexus-java-version>1.0.3</plexus-java-version>
+    <doxiaVersion>1.9.1</doxiaVersion>
+    <doxiaSitetoolsVersion>1.9.2</doxiaSitetoolsVersion>
+    <plexus-java-version>1.0.5</plexus-java-version>
     <!-- maven-shared-utils:3.2.0+ another behavior - broke Surefire performance - end of subprocess notification not arrived in ForkStarter -->
     <mavenSharedUtilsVersion>3.1.0</mavenSharedUtilsVersion>
-    <powermockVersion>2.0.4</powermockVersion>
+    <powermockVersion>2.0.5</powermockVersion>
     <jacocoVersion>0.8.5</jacocoVersion>
     <maven.surefire.scm.devConnection>scm:git:https://gitbox.apache.org/repos/asf/maven-surefire.git</maven.surefire.scm.devConnection>
     <maven.site.path>surefire-archives/surefire-LATEST</maven.site.path>
@@ -105,7 +106,8 @@
     <jdk.home>${java.home}/..</jdk.home>
     <maven.compiler.testSource>1.${javaVersion}</maven.compiler.testSource>
     <maven.compiler.testTarget>1.${javaVersion}</maven.compiler.testTarget>
-    <jvm.args.tests>-server -XX:+UseG1GC -Xms128m -Xmx144m -XX:+TieredCompilation -XX:TieredStopAtLevel=1 -XX:SoftRefLRUPolicyMSPerMB=50 -Djava.awt.headless=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true</jvm.args.tests>
+    <jvm.args.tests>-Xms128m -Xmx144m -XX:SoftRefLRUPolicyMSPerMB=50 -Djava.awt.headless=true -Djdk.net.URLClassPath.disableClassPathURLCheck=true</jvm.args.tests>
+    <project.build.outputTimestamp>2020-04-07T21:04:00Z</project.build.outputTimestamp>
   </properties>
 
   <dependencyManagement>
@@ -219,11 +221,15 @@
         <exclusions>
           <exclusion>
             <groupId>org.apache.maven.shared</groupId>
-            <artifactId>maven-plugin-testing-harness</artifactId>
+            <artifactId>maven-shared-utils</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>org.apache.maven.shared</groupId>
-            <artifactId>maven-shared-utils</artifactId>
+            <groupId>org.apache.maven</groupId>
+             <artifactId>maven-model</artifactId>
+          </exclusion>
+          <exclusion>
+             <groupId>org.sonatype.sisu</groupId>
+             <artifactId>sisu-inject-plexus</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -314,7 +320,7 @@
       <dependency>
         <groupId>org.apache.maven.shared</groupId>
         <artifactId>maven-verifier</artifactId>
-        <version>1.6</version>
+        <version>1.7.2</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.maven.shared</groupId>
@@ -349,7 +355,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>2.27.0</version>
+        <version>2.28.2</version>
         <exclusions>
           <exclusion>
             <groupId>org.hamcrest</groupId>
@@ -380,6 +386,12 @@
         <groupId>org.powermock</groupId>
         <artifactId>powermock-reflect</artifactId>
         <version>${powermockVersion}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.objenesis</groupId>
+            <artifactId>objenesis</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.javassist</groupId>
@@ -454,6 +466,11 @@
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>3.2.3</version><!-- TODO remove when upgrading parent to 35 -->
+        </plugin>
+        <plugin>
           <groupId>org.codehaus.mojo</groupId>
           <artifactId>build-helper-maven-plugin</artifactId>
           <version>1.12</version>
@@ -470,10 +487,8 @@
               </goals>
               <configuration>
                 <includes>
-                  <include>org/apache/maven/shared/utils/logging/*.java</include>
                   <include>HelpMojo.java</include>
                   <include>**/HelpMojo.java</include>
-                  <include>org/apache/maven/plugin/failsafe/xmlsummary/*.java</include>
                 </includes>
                 <compilerArgs>
                   <!-- FIXME: maven-plugin-plugin therefore used -syntax or none due to HelpMojo -->
@@ -489,10 +504,8 @@
               </goals>
               <configuration>
                 <excludes>
-                  <exclude>org/apache/maven/shared/utils/logging/*.java</exclude>
                   <exclude>HelpMojo.java</exclude>
                   <exclude>**/HelpMojo.java</exclude>
-                  <exclude>org/apache/maven/plugin/failsafe/xmlsummary/*.java</exclude>
                 </excludes>
                 <compilerArgs>
                   <arg>-Xdoclint:all</arg>
@@ -601,7 +614,7 @@
                 <exclude>src/test/resources/**/*</exclude>
                 <exclude>src/test/resources/**/*.css</exclude>
                 <exclude>**/*.jj</exclude>
-                <exclude>src/main/resources/META-INF/services/org.apache.maven.surefire.providerapi.SurefireProvider
+                <exclude>src/main/resources/META-INF/services/org.apache.maven.surefire.api.provider.SurefireProvider
                 </exclude>
                 <exclude>DEPENDENCIES</exclude>
                 <exclude>.m2/**</exclude>
@@ -615,7 +628,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
-        <version>3.0.0-M2</version>
+        <version>3.0.0-M3</version>
         <executions>
           <execution>
             <id>enforce-java</id>
@@ -626,8 +639,7 @@
               <rules>
                 <requireJavaVersion>
                   <!-- We use JDK 1.8 to check -Xdoclint:all at compile time but with javac -source 1.7 -target 1.7 -->
-                  <!-- enforcer:1.3.1 fails on jdk9. 3.0.0-M2 does not but surefire:12.2.4 crashes later. -->
-                  <version>[1.8, 1.9)</version>
+                  <version>[1.8, )</version>
                 </requireJavaVersion>
               </rules>
             </configuration>
@@ -656,6 +668,7 @@
                   <maxJdkVersion>${maven.compiler.target}</maxJdkVersion>
                   <excludes>
                     <exclude>org.junit.platform:junit-platform-commons</exclude>
+                    <exclude>org.assertj:assertj-core</exclude>
                   </excludes>
                 </enforceBytecodeVersion>
               </rules>
@@ -736,6 +749,15 @@
           </plugin>
         </plugins>
       </reporting>
+    </profile>
+    <profile>
+      <id>jdk9+</id>
+      <activation>
+        <jdk>[9, )</jdk>
+      </activation>
+      <properties>
+        <jdk.home>${java.home}</jdk.home>
+      </properties>
     </profile>
   </profiles>
 </project>

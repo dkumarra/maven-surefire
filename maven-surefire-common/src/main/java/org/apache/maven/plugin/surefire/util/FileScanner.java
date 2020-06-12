@@ -19,12 +19,12 @@ package org.apache.maven.plugin.surefire.util;
  * under the License.
  */
 
-import org.apache.maven.surefire.testset.TestFilter;
+import org.apache.maven.surefire.api.testset.TestFilter;
 
 import java.io.File;
 import java.util.Collection;
 
-import static org.apache.maven.surefire.util.internal.StringUtils.isBlank;
+import static org.apache.maven.surefire.shared.utils.StringUtils.isBlank;
 
 final class FileScanner
 {

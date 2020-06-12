@@ -20,9 +20,9 @@ package org.apache.maven.surefire.booter;
  */
 
 
-import org.apache.maven.surefire.suite.RunResult;
+import org.apache.maven.surefire.api.suite.RunResult;
 
-import static org.apache.maven.surefire.util.internal.StringUtils.isNotBlank;
+import static org.apache.maven.surefire.shared.utils.StringUtils.isNotBlank;
 
 /**
  * Encapsulates exceptions thrown during Surefire forking.

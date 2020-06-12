@@ -19,12 +19,12 @@ package org.apache.maven.surefire.its;
  * under the License.
  */
 
-import com.googlecode.junittoolbox.ParallelParameterized;
 import org.apache.maven.surefire.its.fixture.OutputValidator;
 import org.apache.maven.surefire.its.fixture.SurefireJUnit4IntegrationTestCase;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameter;
 import org.junit.runners.Parameterized.Parameters;
 
@@ -36,7 +36,7 @@ import static org.apache.maven.surefire.its.fixture.HelperAssertions.assumeJavaV
 /**
  *
  */
-@RunWith( ParallelParameterized.class )
+@RunWith( Parameterized.class )
 @SuppressWarnings( "checkstyle:magicnumber" )
 public class JUnitPlatformIT
         extends SurefireJUnit4IntegrationTestCase
@@ -60,8 +60,8 @@ public class JUnitPlatformIT
         args.add( new Object[] { "5.4.2", "1.0.0" } );
         args.add( new Object[] { "5.5.0", "1.1.0" } );
         args.add( new Object[] { "5.5.2", "1.1.0" } );
-        args.add( new Object[] { "5.6.0-M1", "1.1.0" } );
-        //args.add( new Object[] { "5.6.0-SNAPSHOT", "1.1.6" } );
+        args.add( new Object[] { "5.6.2", "1.2.7" } );
+        //args.add( new Object[] { "5.7.0-SNAPSHOT", "1.2.7" } );
         return args;
     }
 
@@ -78,7 +78,7 @@ public class JUnitPlatformIT
                 .sysProp( "junit5.version", junit5Version )
                 .sysProp( "jqwik.version", jqwikVersion )
                 .executeTest()
-                .verifyErrorFree( 1 );
+                .assertTestSuiteResults( 1, 0, 0, 0 );
     }
 
     @Test
@@ -88,7 +88,7 @@ public class JUnitPlatformIT
                 .sysProp( "junit5.version", junit5Version )
                 .sysProp( "jqwik.version", jqwikVersion )
                 .executeTest()
-                .verifyErrorFree( 1 );
+                .assertTestSuiteResults( 1, 0, 0, 0 );
     }
 
     @Test
@@ -99,7 +99,7 @@ public class JUnitPlatformIT
                 .sysProp( "junit5.version", junit5Version )
                 .sysProp( "jqwik.version", jqwikVersion )
                 .executeTest()
-                .verifyErrorFree( 7 );
+                .assertTestSuiteResults( 7, 0, 0, 0 );
 
 
         validator.getSurefireReportsFile( "TEST-junitplatformenginejupiter.BasicJupiterTest.xml", UTF_8 )

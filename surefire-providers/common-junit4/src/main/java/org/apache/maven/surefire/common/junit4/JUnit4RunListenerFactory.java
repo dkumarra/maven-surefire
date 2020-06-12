@@ -22,11 +22,11 @@ package org.apache.maven.surefire.common.junit4;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.maven.surefire.util.ReflectionUtils;
+import org.apache.maven.surefire.api.util.ReflectionUtils;
 
 import org.junit.runner.notification.RunListener;
 
-import static org.apache.maven.surefire.util.internal.StringUtils.isNotBlank;
+import static org.apache.maven.surefire.shared.utils.StringUtils.isNotBlank;
 
 /**
  * @author Kristian Rosenvold

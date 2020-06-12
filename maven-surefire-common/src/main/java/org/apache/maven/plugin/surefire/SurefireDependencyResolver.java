@@ -21,6 +21,7 @@ package org.apache.maven.plugin.surefire;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,11 +37,11 @@ import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException
 import org.apache.maven.artifact.versioning.OverConstrainedVersionException;
 import org.apache.maven.artifact.versioning.VersionRange;
 import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.surefire.log.api.ConsoleLogger;
 import org.apache.maven.project.ProjectBuildingRequest;
 import org.apache.maven.repository.RepositorySystem;
-import org.apache.maven.shared.artifact.filter.resolve.ScopeFilter;
 import org.apache.maven.shared.transfer.artifact.resolve.ArtifactResult;
 import org.apache.maven.shared.transfer.dependencies.resolve.DependencyResolver;
 import org.apache.maven.shared.transfer.dependencies.resolve.DependencyResolverException;
@@ -54,6 +55,7 @@ import static org.apache.maven.artifact.Artifact.SCOPE_COMPILE_PLUS_RUNTIME;
 import static org.apache.maven.artifact.Artifact.SCOPE_RUNTIME;
 import static org.apache.maven.artifact.ArtifactUtils.artifactMapByVersionlessId;
 import static org.apache.maven.artifact.versioning.VersionRange.createFromVersionSpec;
+import static org.apache.maven.shared.artifact.filter.resolve.ScopeFilter.including;
 
 /**
  * Does dependency resolution and artifact handling for the surefire plugin.
@@ -73,6 +75,7 @@ final class SurefireDependencyResolver
             "surefire-junit-platform",
             "surefire-api",
             "surefire-logger-api",
+            "surefire-shared-utils",
             "common-java5",
             "common-junit3",
             "common-junit4",
@@ -92,13 +95,15 @@ final class SurefireDependencyResolver
 
     private final String pluginName;
 
-    private final DependencyResolver depencencyResolver;
+    private final DependencyResolver dependencyResolver;
+
+    private final boolean offline;
 
     SurefireDependencyResolver( RepositorySystem repositorySystem, ConsoleLogger log,
                                 ArtifactRepository localRepository,
                                 List<ArtifactRepository> pluginRemoteRepositories,
                                 List<ArtifactRepository> projectRemoteRepositories, String pluginName,
-                                DependencyResolver depencencyResolver )
+                                DependencyResolver dependencyResolver, boolean offline )
     {
         this.repositorySystem = repositorySystem;
         this.log = log;
@@ -106,7 +111,8 @@ final class SurefireDependencyResolver
         this.pluginRemoteRepositories = pluginRemoteRepositories;
         this.projectRemoteRepositories = projectRemoteRepositories;
         this.pluginName = pluginName;
-        this.depencencyResolver = depencencyResolver;
+        this.dependencyResolver = dependencyResolver;
+        this.offline = offline;
     }
 
     static boolean isWithinVersionSpec( @Nullable Artifact artifact, @Nonnull String versionSpec )
@@ -133,18 +139,26 @@ final class SurefireDependencyResolver
         }
     }
 
-    Set<Artifact> resolvePluginDependencies( ProjectBuildingRequest request, Collection<Dependency> pluginDependencies )
+    Map<String, Artifact> resolvePluginDependencies( ProjectBuildingRequest request,
+                                                     Plugin plugin, Map<String, Artifact> pluginResolvedDependencies )
             throws MojoExecutionException
     {
+        Collection<Dependency> pluginDependencies = plugin.getDependencies();
         try
         {
-            Iterable<ArtifactResult> resolvedPluginDependencies = depencencyResolver.resolveDependencies( request,
-                    pluginDependencies, null, ScopeFilter.including( SCOPE_COMPILE, SCOPE_RUNTIME ) );
+            Iterable<ArtifactResult> resolvedArtifacts = dependencyResolver.resolveDependencies( request,
+                pluginDependencies, null, including( RuntimeArtifactFilter.SCOPES ) );
 
-            Set<Artifact> resolved = new LinkedHashSet<>();
-            for ( ArtifactResult resolvedPluginDependency : resolvedPluginDependencies )
+            Map<String, Artifact> resolved = new LinkedHashMap<>();
+            for ( ArtifactResult resolvedArtifact : resolvedArtifacts )
             {
-                resolved.add( resolvedPluginDependency.getArtifact() );
+                Artifact artifact = resolvedArtifact.getArtifact();
+                String key = artifact.getGroupId() + ":" + artifact.getArtifactId();
+                Artifact resolvedPluginDependency = pluginResolvedDependencies.get( key );
+                if ( resolvedPluginDependency != null )
+                {
+                    resolved.put( key, artifact );
+                }
             }
             return resolved;
         }
@@ -156,21 +170,33 @@ final class SurefireDependencyResolver
 
     ArtifactResolutionResult resolvePluginArtifact( Artifact artifact )
     {
-        return resolveArtifact( artifact, pluginRemoteRepositories );
+        return resolvePluginArtifact( artifact, new RuntimeArtifactFilter() );
     }
 
     ArtifactResolutionResult resolveProjectArtifact( Artifact artifact )
     {
-        return resolveArtifact( artifact, projectRemoteRepositories );
+        return resolveProjectArtifact( artifact, new RuntimeArtifactFilter() );
     }
 
-    private ArtifactResolutionResult resolveArtifact( Artifact artifact, List<ArtifactRepository> repositories )
+    private ArtifactResolutionResult resolvePluginArtifact( Artifact artifact, ArtifactFilter filter )
+    {
+        return resolveArtifact( artifact, pluginRemoteRepositories, filter );
+    }
+
+    private ArtifactResolutionResult resolveProjectArtifact( Artifact artifact, ArtifactFilter filter )
+    {
+        return resolveArtifact( artifact, projectRemoteRepositories, filter );
+    }
+
+    private ArtifactResolutionResult resolveArtifact( Artifact artifact, List<ArtifactRepository> repositories,
+                                                      ArtifactFilter filter )
     {
         ArtifactResolutionRequest request = new ArtifactResolutionRequest()
+                .setOffline( offline )
                 .setArtifact( artifact )
                 .setLocalRepository( localRepository )
                 .setResolveTransitively( true )
-                .setCollectionFilter( new RuntimeArtifactFilter() )
+                .setCollectionFilter( filter )
                 .setRemoteRepositories( repositories );
 
         return repositorySystem.resolve( request );
@@ -202,36 +228,6 @@ final class SurefireDependencyResolver
     Map<String, Artifact> getProviderClasspathAsMap( String providerArtifactId, String providerVersion )
     {
         return artifactMapByVersionlessId( getProviderClasspath( providerArtifactId, providerVersion ) );
-    }
-
-    Set<Artifact> addProviderToClasspath( Map<String, Artifact> pluginArtifactMap, Artifact mojoPluginArtifact,
-                                          Artifact surefireApi, Artifact surefireLoggerApi )
-    {
-        Set<Artifact> providerArtifacts = new LinkedHashSet<>();
-        ArtifactResolutionResult artifactResolutionResult = resolvePluginArtifact( mojoPluginArtifact );
-        for ( Artifact artifact : pluginArtifactMap.values() )
-        {
-            if ( !artifactResolutionResult.getArtifacts().contains( artifact ) )
-            {
-                providerArtifacts.add( artifact );
-                for ( Artifact dependency : resolvePluginArtifact( artifact ).getArtifacts() )
-                {
-                    String groupId = dependency.getGroupId();
-                    String artifactId = dependency.getArtifactId();
-                    if ( groupId.equals( surefireApi.getGroupId() )
-                            && artifactId.equals( surefireApi.getArtifactId() ) )
-                    {
-                        providerArtifacts.add( surefireApi );
-                    }
-                    else if ( groupId.equals( surefireLoggerApi.getGroupId() )
-                            && artifactId.equals( surefireLoggerApi.getArtifactId() ) )
-                    {
-                        providerArtifacts.add( surefireLoggerApi );
-                    }
-                }
-            }
-        }
-        return orderProviderArtifacts( providerArtifacts );
     }
 
     private static Set<Artifact> orderProviderArtifacts( Set<Artifact> providerArtifacts )
@@ -269,11 +265,24 @@ final class SurefireDependencyResolver
         private static final Collection<String> SCOPES =
                 asList( SCOPE_COMPILE, SCOPE_COMPILE_PLUS_RUNTIME, SCOPE_RUNTIME );
 
+        private final Artifact filter;
+
+        RuntimeArtifactFilter()
+        {
+            this( null );
+        }
+
+        RuntimeArtifactFilter( Artifact filter )
+        {
+            this.filter = filter;
+        }
+
         @Override
         public boolean include( Artifact artifact )
         {
             String scope = artifact.getScope();
-            return !artifact.isOptional() && ( scope == null || SCOPES.contains( scope ) );
+            return ( filter == null || artifact.equals( filter ) )
+                && !artifact.isOptional() && ( scope == null || SCOPES.contains( scope ) );
         }
     }
 }

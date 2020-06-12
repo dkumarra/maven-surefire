@@ -20,7 +20,7 @@ package org.apache.maven.plugin.surefire.report;
  */
 
 import org.apache.maven.surefire.extensions.StatelessTestsetInfoFileReportEventListener;
-import org.apache.maven.surefire.report.ReporterException;
+import org.apache.maven.surefire.api.report.ReporterException;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -32,7 +32,7 @@ import java.nio.charset.Charset;
 import java.util.List;
 
 import static org.apache.maven.plugin.surefire.report.FileReporterUtils.stripIllegalFilenameChars;
-import static org.apache.maven.surefire.util.internal.StringUtils.isNotBlank;
+import static org.apache.maven.surefire.shared.utils.StringUtils.isNotBlank;
 
 /**
  * Base class for file reporters.

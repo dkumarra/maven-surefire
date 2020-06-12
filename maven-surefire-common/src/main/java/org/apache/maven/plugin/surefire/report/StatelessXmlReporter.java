@@ -23,8 +23,8 @@ import org.apache.maven.plugin.surefire.booterclient.output.InPluginProcessDumpS
 import org.apache.maven.surefire.shared.utils.xml.PrettyPrintXMLWriter;
 import org.apache.maven.surefire.shared.utils.xml.XMLWriter;
 import org.apache.maven.surefire.extensions.StatelessReportEventListener;
-import org.apache.maven.surefire.report.ReporterException;
-import org.apache.maven.surefire.report.SafeThrowable;
+import org.apache.maven.surefire.api.report.ReporterException;
+import org.apache.maven.surefire.api.report.SafeThrowable;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -46,7 +46,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.maven.plugin.surefire.report.DefaultReporterFactory.TestResultType;
 import static org.apache.maven.plugin.surefire.report.FileReporterUtils.stripIllegalFilenameChars;
 import static org.apache.maven.plugin.surefire.report.ReportEntryType.SUCCESS;
-import static org.apache.maven.surefire.util.internal.StringUtils.isBlank;
+import static org.apache.maven.surefire.shared.utils.StringUtils.isBlank;
 
 @SuppressWarnings( { "javadoc", "checkstyle:javadoctype" } )
 // CHECKSTYLE_OFF: LineLength
@@ -224,8 +224,8 @@ public class StatelessXmlReporter
             {
                 getTestProblems( fw, ppw, methodEntry, trimStackTrace, outputStream,
                         methodEntry.getReportEntryType().getXmlTag(), false );
-                createOutErrElements( fw, ppw, methodEntry, outputStream );
             }
+            createOutErrElements( fw, ppw, methodEntry, outputStream );
             ppw.endElement();
         }
     }
